@@ -9,17 +9,51 @@ from django.contrib import messages
 from datetime import datetime
 
 
-def home(request):
+def index(request):
+    recipies = Recipe.objects.order_by('?')[:5]
     context = {
-        'recipies': Recipe.objects.all().order_by('-id')[:5]
+        'recipies': recipies
     }
-    return render(request, 'home.html', context)
+    return render(request, 'recipe_app/index.html', context)
 
 def recipe_detail(request, recipe_id):
     context = {
         'recipe': get_object_or_404(Recipe, id=recipe_id)
     }
-    return render(request, 'recipe_detail.html', context)
+    return render(request, 'recipe_app/recipe_detail.html', context)
+
+def user_login(request):
+    if request.method == 'POST':
+        form = AuthenticationForm(request, request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                messages.success(request, f'Welcome, {username}!')
+                return redirect('index')
+            else:
+                messages.error(request, 'Invalid username or password.')
+    else:
+        form = AuthenticationForm()
+    return render(request, 'recipe_app/login.html', {'form': form})
+
+def user_logout(request):
+    logout(request)
+    return redirect('index')
+
+def register(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            username = form.cleaned_data.get('username')
+            messages.success(request, f'Account created for {username}!')
+            return redirect('login')
+    else:
+        form = UserCreationForm()
+    return render(request, 'recipe_app/register.html', {'form': form})
 
 @login_required(login_url='/accounts/login/')  
 def add_recipe(request):
@@ -37,10 +71,10 @@ def add_recipe(request):
             category_id = request.POST.get('category')
             category = Category.objects.get(pk=category_id)
             CategoryRelationship.objects.create(recipe=recipe, category=category)
-            return redirect('home')
+            return redirect('index')
     else: 
         form = RecipeForm()
-    return render(request, 'add_recipie.html', {'form': form})
+    return render(request, 'recipe_app/add_recipie.html', {'form': form})
 
 @login_required(login_url='accounts/login')
 def edit_recipe(request, recipe_id):
@@ -48,54 +82,16 @@ def edit_recipe(request, recipe_id):
     if request.method == 'POST':
         form = RecipeForm(request.POST, request.FILES, instance=recipe)
         if form.is_valid():
-            # Сохранение рецепта
             form.save()
-            return redirect('home')
+            return redirect('index')
     else:
-        # Получение связей категорий для этого рецепта
         recipe_category_relationships = CategoryRelationship.objects.filter(recipe=recipe)
-        # Получение первой связи категории, если она существует
         if recipe_category_relationships.exists():
             category = recipe_category_relationships.first().category
         else:
             category = None
-        # Передача категории в форму при создании экземпляра формы
         form = RecipeForm(instance=recipe, initial={'category': category})
 
-    return render(request, 'recipe_form.html', {'form': form, 'recipe': recipe})
+    return render(request, 'recipe_app/recipe_form.html', {'form': form, 'recipe': recipe})
 
 
-
-
-def user_login(request):
-    if request.method == 'POST':
-        form = AuthenticationForm(request, request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
-            user = authenticate(username=username, password=password)
-            if user is not None:
-                login(request, user)
-                messages.success(request, f'Welcome, {username}!')
-                return redirect('home')
-            else:
-                messages.error(request, 'Invalid username or password.')
-    else:
-        form = AuthenticationForm()
-    return render(request, 'login.html', {'form': form})
-
-def user_logout(request):
-    logout(request)
-    return redirect('home')
-
-def register(request):
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            username = form.cleaned_data.get('username')
-            messages.success(request, f'Account created for {username}!')
-            return redirect('login')
-    else:
-        form = UserCreationForm()
-    return render(request, 'register.html', {'form': form})
