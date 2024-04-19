@@ -16,6 +16,9 @@
                     <div>
                         <p>Краткое описание: <br>{{ recipe.description | truncatechars:150 }}</p>
                     </div>
+                    <div>
+                        Автор: {{ recipe.author }}
+                    </div>
                 </div>
             </li>
         {% endfor %}

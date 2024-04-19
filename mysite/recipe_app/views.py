@@ -12,7 +12,7 @@ from datetime import datetime
 def index(request):
     recipies = Recipe.objects.order_by('?')[:5]
     context = {
-        'recipies': recipies
+        'recipies': recipies,
     }
     return render(request, 'recipe_app/index.html', context)
 
